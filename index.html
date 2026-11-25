@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0a0e1a">
+<link rel="manifest" href="manifest.json">
+<title>OSSTMM Risk Assessment</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e1a;--surface:#111827;--surface2:#1e293b;
+  --accent:#3b82f6;--accent2:#8b5cf6;--green:#10b981;--amber:#f59e0b;--red:#ef4444;
+  --text:#f1f5f9;--muted:#94a3b8;--dim:#475569;
+  --radius:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;overflow-x:hidden}
+.container{max-width:480px;margin:0 auto;padding:16px;min-height:100dvh;display:flex;flex-direction:column}
+
+/* Header */
+.header{text-align:center;padding:24px 0 16px}
+.header h1{font-size:1.4rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header p{color:var(--muted);font-size:.85rem;margin-top:4px}
+
+/* Progress */
+.progress-wrap{margin:12px 0 20px}
+.progress-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:3px;transition:width .4s ease}
+.progress-label{display:flex;justify-content:space-between;margin-top:6px;font-size:.75rem;color:var(--muted)}
+
+/* Dimension badge */
+.dimension-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:.75rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:16px}
+.dim-visibility{background:#3b82f620;color:#60a5fa;border:1px solid #3b82f640}
+.dim-induction{background:#8b5cf620;color:#a78bfa;border:1px solid #8b5cf640}
+.dim-interactions{background:#10b98120;color:#34d399;border:1px solid #10b98140}
+.dim-intervention{background:#f59e0b20;color:#fbbf24;border:1px solid #f59e0b40}
+.dim-inquest{background:#ef444420;color:#f87171;border:1px solid #ef444440}
+
+/* Question card */
+.question-card{background:var(--surface);border-radius:var(--radius);padding:20px;flex:1;display:flex;flex-direction:column;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.question-text{font-size:1.05rem;line-height:1.5;margin-bottom:20px;font-weight:500}
+.question-context{font-size:.8rem;color:var(--muted);margin-bottom:16px;padding:10px;background:var(--surface2);border-radius:8px;line-height:1.4}
+
+/* Options */
+.options{display:flex;flex-direction:column;gap:10px;flex:1}
+.option{background:var(--surface2);border:2px solid transparent;border-radius:10px;padding:14px 16px;cursor:pointer;transition:all .2s;display:flex;align-items:flex-start;gap:12px;-webkit-tap-highlight-color:transparent}
+.option:active{transform:scale(.98)}
+.option:hover{border-color:var(--accent)}
+.option.selected{border-color:var(--accent);background:#3b82f615}
+.option-marker{width:22px;height:22px;border-radius:50%;border:2px solid var(--dim);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.option.selected .option-marker{border-color:var(--accent);background:var(--accent)}
+.option.selected .option-marker::after{content:'';width:8px;height:8px;border-radius:50%;background:#fff}
+.option-content{flex:1}
+.option-label{font-size:.95rem;font-weight:500}
+.option-desc{font-size:.78rem;color:var(--muted);margin-top:3px;line-height:1.3}
+
+/* Navigation */
+.nav{display:flex;gap:10px;margin-top:20px;padding-bottom:env(safe-area-inset-bottom,16px)}
+.btn{flex:1;padding:14px;border:none;border-radius:10px;font-size:.95rem;font-weight:600;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.btn:active{transform:scale(.97)}
+.btn-secondary{background:var(--surface2);color:var(--text)}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff}
+.btn:disabled{opacity:.4;cursor:default;transform:none}
+.btn-export{background:var(--surface);border:1px solid var(--dim);color:var(--text);max-width:none;padding:12px 20px}
+.btn-export:active{background:var(--surface2)}
+
+/* Intro screen */
+.intro{text-align:center;flex:1;display:flex;flex-direction:column;justify-content:center;gap:20px;padding:20px 0}
+.intro-icon{font-size:3.5rem;margin-bottom:8px}
+.intro h2{font-size:1.5rem;font-weight:700}
+.intro p{color:var(--muted);line-height:1.6;font-size:.9rem}
+.intro-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0}
+.intro-stat{background:var(--surface);border-radius:10px;padding:14px 8px}
+.intro-stat .num{font-size:1.3rem;font-weight:700;color:var(--accent)}
+.intro-stat .label{font-size:.7rem;color:var(--muted);margin-top:2px}
+
+/* Results */
+.results{flex:1;display:flex;flex-direction:column;animation:fadeIn .5s ease}
+.score-ring{width:180px;height:180px;margin:20px auto;position:relative}
+.score-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.score-ring circle{fill:none;stroke-width:10}
+.score-ring .track{stroke:var(--surface2)}
+.score-ring .fill{stroke-linecap:round;transition:stroke-dashoffset 1.5s ease}
+.score-value{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-value .num{font-size:2.8rem;font-weight:800}
+.score-value .label{font-size:.8rem;color:var(--muted)}
+.grade-label{text-align:center;font-size:1.1rem;font-weight:600;margin:4px 0 20px}
+
+.dimension-scores{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.dim-score-row{background:var(--surface);border-radius:10px;padding:12px 16px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+.dim-score-row:active{background:var(--surface2)}
+.dim-score-top{display:flex;align-items:center;gap:12px}
+.dim-score-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.dim-score-info{flex:1}
+.dim-score-name{font-size:.85rem;font-weight:600}
+.dim-score-bar{height:4px;background:var(--surface2);border-radius:2px;margin-top:6px;overflow:hidden}
+.dim-score-bar-fill{height:100%;border-radius:2px;transition:width 1s ease}
+.dim-score-val{font-size:.9rem;font-weight:700;min-width:36px;text-align:right}
+.dim-score-chevron{font-size:.7rem;color:var(--dim);transition:transform .2s;margin-left:4px}
+.dim-score-row.expanded .dim-score-chevron{transform:rotate(90deg)}
+
+/* Dimension explainer panel */
+.dim-explainer{max-height:0;overflow:hidden;transition:max-height .3s ease, padding .3s ease;padding:0 0}
+.dim-score-row.expanded .dim-explainer{max-height:600px;padding:14px 0 4px}
+.dim-explainer-inner{background:var(--surface2);border-radius:8px;padding:14px;font-size:.8rem;line-height:1.5;color:var(--muted)}
+.dim-explainer-inner h4{color:var(--text);font-size:.85rem;margin-bottom:8px;font-weight:600}
+.dim-explainer-inner .dim-phase{margin-top:10px}
+.dim-explainer-inner .dim-phase-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px}
+.dim-explainer-inner .dim-control{display:flex;gap:8px;padding:3px 0}
+.dim-explainer-inner .dim-control-name{font-weight:600;color:var(--text);min-width:100px}
+.dim-explainer-inner .dim-control-type{font-size:.72rem;padding:2px 6px;border-radius:4px;font-weight:500}
+.type-trust{background:#3b82f620;color:#60a5fa}
+.type-security{background:#8b5cf620;color:#a78bfa}
+
+.findings{margin:20px 0}
+.findings h3{font-size:1rem;font-weight:600;margin-bottom:10px}
+.finding{background:var(--surface);border-radius:10px;padding:14px;margin-bottom:8px;border-left:3px solid var(--amber)}
+.finding.critical{border-left-color:var(--red)}
+.finding.good{border-left-color:var(--green)}
+.finding-title{font-size:.85rem;font-weight:600;margin-bottom:4px}
+.finding-desc{font-size:.78rem;color:var(--muted);line-height:1.4}
+
+.results-footer{margin-top:auto;text-align:center;padding:16px 0}
+.results-footer p{font-size:.75rem;color:var(--dim)}
+
+/* Export actions */
+.export-actions{display:flex;gap:10px;margin:16px 0}
+.export-actions .btn{flex:1}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 20px;border-radius:8px;font-size:.85rem;font-weight:600;opacity:0;transition:opacity .3s;pointer-events:none;z-index:100}
+.toast.show{opacity:1}
+
+/* Hide sections */
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>OSSTMM Risk Assessment</h1>
+    <p>Measure your security posture</p>
+  </div>
+
+  <!-- Intro -->
+  <div id="intro" class="intro">
+    <div>
+      <div class="intro-icon">&#x1f6e1;</div>
+      <h2>How Secure Are You, Really?</h2>
+      <p>Not how compliant. Not how many tools you bought. How secure, measured against the operational reality of your environment.</p>
+    </div>
+    <div class="intro-stats">
+      <div class="intro-stat"><div class="num">25</div><div class="label">Questions</div></div>
+      <div class="intro-stat"><div class="num">5</div><div class="label">Dimensions</div></div>
+      <div class="intro-stat"><div class="num">~5m</div><div class="label">To complete</div></div>
+    </div>
+    <p style="font-size:.78rem;color:var(--dim)">Based on OSSTMM 4 methodology by ISECOM</p>
+    <button class="btn btn-primary" onclick="startQuiz()" style="margin-top:8px">Start Assessment</button>
+  </div>
+
+  <!-- Quiz -->
+  <div id="quiz" class="hidden">
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label"><span id="progressText">1 of 25</span><span id="dimensionLabel"></span></div>
+    </div>
+    <div class="question-card">
+      <div id="dimBadge" class="dimension-badge"></div>
+      <div id="questionText" class="question-text"></div>
+      <div id="questionContext" class="question-context hidden"></div>
+      <div id="options" class="options"></div>
+    </div>
+    <div class="nav">
+      <button class="btn btn-secondary" id="prevBtn" onclick="prevQuestion()" disabled>Back</button>
+      <button class="btn btn-primary" id="nextBtn" onclick="nextQuestion()" disabled>Next</button>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div id="results" class="results hidden"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DIMENSIONS = [
+  {key:'visibility',label:'Visibility',color:'#3b82f6',icon:'&#x1f441;',
+   desc:'What your environment discloses about itself',
+   v4:{
+     summary:'Visibility measures characteristics: what your systems, people, and processes reveal to observers, both intentionally and unintentionally. Every piece of information disclosed is attack surface.',
+     trustControls:[
+       {phase:'Intent',name:'Exoanalysis',desc:'Understanding what outsiders can learn about you before making contact'},
+       {phase:'React',name:'Throttling',desc:'Controlling the rate and scope of information disclosure even after access is granted'},
+       {phase:'Resolve',name:'Accountability',desc:'Linking every significant action to a verified identity after the fact'}
+     ],
+     securityControls:[
+       {phase:'Intent',name:'Identification',desc:'Establishing who or what an entity claims to be'},
+       {phase:'React',name:'Authentication',desc:'Verifying that the claimed identity is genuine'},
+       {phase:'Resolve',name:'Non-Repudiation',desc:'Ensuring actions cannot be denied after completion'}
+     ]
+   }},
+  {key:'induction',label:'Induction',color:'#8b5cf6',icon:'&#x1f30a;',
+   desc:'How context shapes and constrains behavior',
+   v4:{
+     summary:'Induction measures context: the environmental conditions that shape how entities behave within your systems. An attacker who understands your context can predict your responses. Controlling context means controlling the terms of engagement.',
+     trustControls:[
+       {phase:'Intent',name:'Suppression',desc:'Reducing contextual clues that help an attacker model your environment'},
+       {phase:'React',name:'Channeling',desc:'Forcing activity through controlled, monitored pathways'},
+       {phase:'Resolve',name:'Scrutiny',desc:'Re-examining trust assumptions after the fact to verify they still hold'}
+     ],
+     securityControls:[
+       {phase:'Intent',name:'Restriction',desc:'Limiting what actions are possible before they are attempted'},
+       {phase:'React',name:'Alarm',desc:'Detecting and signaling when contextual boundaries are crossed'},
+       {phase:'Resolve',name:'Remediation',desc:'Restoring context to a known-good state after disruption'}
+     ]
+   }},
+  {key:'interactions',label:'Interactions',color:'#10b981',icon:'&#x26a1;',
+   desc:'Direct force exerted on or by your systems',
+   v4:{
+     summary:'Interactions measures force: every direct exchange between entities in your environment. Authentication handshakes, API calls, privilege escalations, data transfers. Each interaction is a point where trust is tested against reality.',
+     trustControls:[
+       {phase:'Intent',name:'Commissioning',desc:'Ensuring every interaction has explicit prior authorization'},
+       {phase:'React',name:'Surveillance',desc:'Monitoring interactions as they happen in real time'},
+       {phase:'Resolve',name:'Validation',desc:'Confirming the outcome matched the stated intent after completion'}
+     ],
+     securityControls:[
+       {phase:'Intent',name:'Authorization',desc:'Granting specific permissions for specific actions'},
+       {phase:'React',name:'Subjugation',desc:'Constraining an interaction to only its authorized scope'},
+       {phase:'Resolve',name:'Indemnification',desc:'Ensuring recovery capability if an interaction causes damage'}
+     ]
+   }},
+  {key:'intervention',label:'Intervention',color:'#f59e0b',icon:'&#x1f6e0;',
+   desc:'Resource consumption and sustainment',
+   v4:{
+     summary:'Intervention measures resources: the operational capacity your environment needs to sustain itself under pressure. When resources are exhausted, every other control fails. This dimension answers whether you can keep operating when things go wrong.',
+     trustControls:[
+       {phase:'Intent',name:'Abundance',desc:'Ensuring sufficient resources that a single loss does not create a gap'},
+       {phase:'React',name:'Confinement',desc:'Containing a compromised resource to limit blast radius'},
+       {phase:'Resolve',name:'Solidity',desc:'Maintaining operational integrity under sustained resource pressure'}
+     ],
+     securityControls:[
+       {phase:'Intent',name:'Availability',desc:'Ensuring resources are accessible when needed'},
+       {phase:'React',name:'Containment',desc:'Isolating resource consumption to prevent cascade failures'},
+       {phase:'Resolve',name:'Stabilization',desc:'Returning resource levels to operational baseline after disruption'}
+     ]
+   }},
+  {key:'inquest',label:'Inquest',color:'#ef4444',icon:'&#x1f4dc;',
+   desc:'The story of your state and history',
+   v4:{
+     summary:'Inquest measures narrative: the story your environment tells about what happened, what is happening, and what should happen. If you cannot reconstruct an incident, you cannot learn from it. If you cannot detect drift from your baseline, you cannot know when you have been compromised.',
+     trustControls:[
+       {phase:'Intent',name:'Curation',desc:'Deliberately managing the narrative of your security state for different audiences'},
+       {phase:'React',name:'Tethering',desc:'Binding operations to documented standards so deviations are detectable'},
+       {phase:'Resolve',name:'Purity',desc:'Maintaining data integrity from creation through archival'}
+     ],
+     securityControls:[
+       {phase:'Intent',name:'Confidentiality',desc:'Controlling who has access to the narrative of your state'},
+       {phase:'React',name:'Resilience',desc:'Maintaining narrative continuity even during disruption'},
+       {phase:'Resolve',name:'Integrity',desc:'Ensuring the recorded narrative has not been tampered with'}
+     ]
+   }}
+];
+
+const QUESTIONS = [
+  // VISIBILITY (5)
+  {dim:0, text:'Do you know what your systems expose to external observers without authentication?',
+   context:'Exoanalysis: understanding what outsiders can learn about you before making contact.',
+   options:[
+     {label:'Yes, we run regular external reconnaissance',desc:'Scheduled external attack-surface scans',score:3},
+     {label:'Partially, we have some visibility',desc:'Ad-hoc scans or occasional third-party assessments',score:2},
+     {label:'We know our public-facing assets',desc:'Asset inventory exists but no active recon',score:1},
+     {label:'Not systematically',desc:'No regular external visibility assessment',score:0}
+   ]},
+  {dim:0, text:'Can you throttle or limit what an authenticated user can observe about your environment?',
+   context:'Throttling: controlling the rate and scope of information disclosure even after access is granted.',
+   options:[
+     {label:'Granular controls per role and context',desc:'Dynamic scoping based on need, time, and behavior',score:3},
+     {label:'Role-based access controls',desc:'Static RBAC with defined visibility boundaries',score:2},
+     {label:'Basic permissions',desc:'Broad access tiers, limited granularity',score:1},
+     {label:'Authenticated users see most things',desc:'Flat access model post-authentication',score:0}
+   ]},
+  {dim:0, text:'Do you have accountability mechanisms that link every significant action to a verified identity?',
+   context:'Accountability: ensuring actions can be traced back and attributed after the fact.',
+   options:[
+     {label:'Comprehensive, tamper-resistant audit trails',desc:'Centralized logging with integrity verification',score:3},
+     {label:'Good logging coverage',desc:'Most systems log actions, some gaps in coverage',score:2},
+     {label:'Partial logging',desc:'Critical systems logged, others inconsistent',score:1},
+     {label:'Minimal or no audit trails',desc:'Logging is sparse or easily circumvented',score:0}
+   ]},
+  {dim:0, text:'If an attacker is performing reconnaissance against you right now, how quickly would you know?',
+   options:[
+     {label:'Real-time detection',desc:'Active monitoring for recon patterns, alerting in minutes',score:3},
+     {label:'Within hours',desc:'Log review or automated detection catches it same-day',score:2},
+     {label:'Eventually, maybe',desc:'Might show up in a periodic review',score:1},
+     {label:'We probably wouldn\'t know',desc:'No recon detection capability',score:0}
+   ]},
+  {dim:0, text:'Do you actively manage your digital footprint across third-party platforms and data brokers?',
+   options:[
+     {label:'Continuous monitoring and takedown process',desc:'Active management of exposed data across platforms',score:3},
+     {label:'Periodic reviews',desc:'Occasional checks of what\'s out there',score:2},
+     {label:'Aware of some exposure',desc:'Know about major platforms but no active management',score:1},
+     {label:'No visibility into third-party exposure',desc:'Haven\'t assessed external data exposure',score:0}
+   ]},
+
+  // INDUCTION (5)
+  {dim:1, text:'Do you actively suppress information that could help an attacker understand your environment?',
+   context:'Suppression: reducing the contextual clues that shape an attacker\'s approach.',
+   options:[
+     {label:'Active suppression program',desc:'Banner stripping, metadata removal, deliberate disinformation',score:3},
+     {label:'Standard hardening',desc:'Default banners removed, headers cleaned up',score:2},
+     {label:'Some effort',desc:'A few things hardened, most defaults still in place',score:1},
+     {label:'Not really',desc:'Default configurations expose environment details',score:0}
+   ]},
+  {dim:1, text:'Are your systems hardened to channel interactions through defined, monitored pathways?',
+   context:'Channeling: forcing activity through controlled paths where you can observe and constrain it.',
+   options:[
+     {label:'Micro-segmented with monitored channels',desc:'All traffic flows through defined, instrumented paths',score:3},
+     {label:'Network segmentation in place',desc:'Major zones separated, some monitoring at boundaries',score:2},
+     {label:'Basic segmentation',desc:'DMZ exists, internal is mostly flat',score:1},
+     {label:'Flat network',desc:'Most systems can reach most other systems',score:0}
+   ]},
+  {dim:1, text:'When environmental conditions change (new threat, new regulation, staff change), how fast does your security posture adapt?',
+   options:[
+     {label:'Automated or near-real-time adaptation',desc:'Policy engines adjust dynamically to context changes',score:3},
+     {label:'Days to weeks',desc:'Change management process handles it reasonably fast',score:2},
+     {label:'Months',desc:'Requires budget cycles, committee approvals',score:1},
+     {label:'We mostly react after incidents',desc:'Posture changes driven by breaches, not conditions',score:0}
+   ]},
+  {dim:1, text:'Do you scrutinize trust relationships with third parties on a regular cycle?',
+   context:'Scrutiny: re-examining trust assumptions after the fact to verify they still hold.',
+   options:[
+     {label:'Continuous or quarterly re-verification',desc:'Automated trust scoring, regular access reviews',score:3},
+     {label:'Annual vendor reviews',desc:'Yearly assessment of third-party risk',score:2},
+     {label:'At onboarding only',desc:'Vendors assessed when added, rarely re-checked',score:1},
+     {label:'Trust is assumed once granted',desc:'No systematic re-evaluation of third-party trust',score:0}
+   ]},
+  {dim:1, text:'Can your environment distinguish between normal operational patterns and anomalous behavior in context?',
+   options:[
+     {label:'Behavioral baselines with contextual detection',desc:'ML/statistical baselines tuned to your environment',score:3},
+     {label:'Signature-based plus some behavioral',desc:'Known-bad detection with some anomaly rules',score:2},
+     {label:'Signature-based detection only',desc:'Relies on known patterns and IOCs',score:1},
+     {label:'No behavioral detection',desc:'Would not detect novel attack patterns',score:0}
+   ]},
+
+  // INTERACTIONS (5)
+  {dim:2, text:'Are interactions with your systems explicitly commissioned and authorized before they occur?',
+   context:'Commissioning: ensuring every interaction has explicit prior authorization, not just authentication.',
+   options:[
+     {label:'Zero-standing-privilege model',desc:'All access is just-in-time, explicitly requested and approved',score:3},
+     {label:'Formal access request process',desc:'Most access requires approval, some standing privileges exist',score:2},
+     {label:'Role-based defaults',desc:'Access granted by role, not per-interaction',score:1},
+     {label:'Broad standing access',desc:'Most users have persistent access to most things they need',score:0}
+   ]},
+  {dim:2, text:'Do you have active surveillance of interactions happening within your trust boundaries?',
+   context:'Surveillance: monitoring force interactions as they happen, not just logging them after.',
+   options:[
+     {label:'Real-time interaction monitoring with alerting',desc:'Every significant interaction observed and evaluated live',score:3},
+     {label:'Good coverage of critical systems',desc:'Key systems monitored in real-time, others logged',score:2},
+     {label:'Perimeter monitoring mostly',desc:'Ingress/egress watched, internal interactions less visible',score:1},
+     {label:'Minimal active monitoring',desc:'Would not see most interactions until after the fact',score:0}
+   ]},
+  {dim:2, text:'Can you validate that a completed interaction actually did what it was supposed to do?',
+   context:'Validation: confirming the outcome matches the intent after an interaction completes.',
+   options:[
+     {label:'Automated validation of outcomes',desc:'Integrity checks, expected-state verification post-action',score:3},
+     {label:'Spot-check validation',desc:'Some transactions verified, manual review processes',score:2},
+     {label:'Trust-but-verify on escalation',desc:'Only validate when something looks wrong',score:1},
+     {label:'Assume success unless failure is obvious',desc:'No systematic outcome validation',score:0}
+   ]},
+  {dim:2, text:'If a privileged session is compromised right now, can you revoke it in real time?',
+   options:[
+     {label:'Immediate automated revocation',desc:'Behavioral triggers can kill sessions in seconds',score:3},
+     {label:'Manual but fast',desc:'SOC can revoke within minutes when alerted',score:2},
+     {label:'Hours',desc:'Requires ticket, approval, and manual intervention',score:1},
+     {label:'Wait for token expiry',desc:'No real-time revocation capability',score:0}
+   ]},
+  {dim:2, text:'Do you test your security controls by actually attacking them?',
+   options:[
+     {label:'Continuous or regular red team / pen testing',desc:'Ongoing offensive testing against live environment',score:3},
+     {label:'Annual pen test',desc:'Yearly third-party assessment',score:2},
+     {label:'Vulnerability scanning only',desc:'Automated scans, no manual exploitation testing',score:1},
+     {label:'No offensive testing',desc:'Controls are assumed to work as configured',score:0}
+   ]},
+
+  // INTERVENTION (5)
+  {dim:3, text:'Do you have abundance in your critical resources, enough that losing one doesn\'t degrade the operation?',
+   context:'Abundance: ensuring sufficient resources that a single loss doesn\'t create a gap.',
+   options:[
+     {label:'Full redundancy with automated failover',desc:'No single point of failure in critical systems',score:3},
+     {label:'Redundancy for most critical systems',desc:'Primary systems redundant, some secondary gaps',score:2},
+     {label:'Backup but not redundant',desc:'Can recover but with downtime',score:1},
+     {label:'Single points of failure exist',desc:'Losing key systems means operational degradation',score:0}
+   ]},
+  {dim:3, text:'Can you confine a compromised system to prevent lateral movement?',
+   context:'Confinement: containing a compromised resource to limit blast radius.',
+   options:[
+     {label:'Automated containment with micro-segmentation',desc:'Compromised assets isolated automatically, blast radius near-zero',score:3},
+     {label:'Manual containment, good segmentation',desc:'Can isolate quickly with network controls',score:2},
+     {label:'Can disconnect but it\'s disruptive',desc:'Containment means taking things offline',score:1},
+     {label:'Lateral movement would be hard to stop',desc:'Flat network, no rapid containment capability',score:0}
+   ]},
+  {dim:3, text:'How solid are your systems against resource exhaustion attacks?',
+   context:'Solidity: the ability to sustain operations under resource pressure.',
+   options:[
+     {label:'DDoS protection, rate limiting, auto-scaling',desc:'Multiple layers of resource-exhaustion defense',score:3},
+     {label:'DDoS protection on perimeter',desc:'Edge protection, less coverage internally',score:2},
+     {label:'Basic rate limiting',desc:'Some protections, but sustained pressure would degrade service',score:1},
+     {label:'Vulnerable to resource exhaustion',desc:'No specific protections against sustained pressure',score:0}
+   ]},
+  {dim:3, text:'If your primary identity provider goes down, what happens?',
+   options:[
+     {label:'Failover IdP with graceful degradation',desc:'Backup authentication, reduced but functional access',score:3},
+     {label:'Break-glass procedures exist',desc:'Emergency access process documented and tested',score:2},
+     {label:'Break-glass exists but untested',desc:'Procedure on paper, never exercised',score:1},
+     {label:'Everything stops',desc:'No authentication means no access to anything',score:0}
+   ]},
+  {dim:3, text:'Are your backup and recovery processes tested against actual disaster scenarios?',
+   options:[
+     {label:'Regular disaster recovery exercises',desc:'Full DR tests at least quarterly, lessons incorporated',score:3},
+     {label:'Annual DR test',desc:'Yearly exercise, usually passes with known gaps',score:2},
+     {label:'Backups exist but DR untested',desc:'Data backed up, full recovery never exercised',score:1},
+     {label:'Hope for the best',desc:'No formal DR process or testing',score:0}
+   ]},
+
+  // INQUEST (5)
+  {dim:4, text:'Do you curate what information about your security posture is available to different audiences?',
+   context:'Curation: deliberately managing the narrative of your security state for different stakeholders.',
+   options:[
+     {label:'Tiered disclosure with deliberate curation',desc:'Board sees posture summary, ops sees detail, public sees minimum',score:3},
+     {label:'Different reports for different audiences',desc:'Some tailoring of security narrative by audience',score:2},
+     {label:'One-size-fits-all reporting',desc:'Same security reports go to everyone',score:1},
+     {label:'No structured reporting',desc:'Security posture communicated ad-hoc if at all',score:0}
+   ]},
+  {dim:4, text:'Are your operational procedures tethered to documented, version-controlled standards?',
+   context:'Tethering: binding operations to a script so deviations are detectable.',
+   options:[
+     {label:'Infrastructure as code, change detection on drift',desc:'All operations codified, deviations auto-detected',score:3},
+     {label:'Documented procedures, manual enforcement',desc:'SOPs exist and are mostly followed',score:2},
+     {label:'Some documentation',desc:'Critical processes documented, most are tribal knowledge',score:1},
+     {label:'Tribal knowledge',desc:'Operations depend on who\'s in the room',score:0}
+   ]},
+  {dim:4, text:'Can you tell the full story of a security incident from detection through resolution?',
+   options:[
+     {label:'Complete incident timeline reconstruction',desc:'Can reconstruct any incident end-to-end with evidence',score:3},
+     {label:'Good coverage for major incidents',desc:'Can piece together most of the story for significant events',score:2},
+     {label:'Partial reconstruction',desc:'Some pieces available, gaps in the narrative',score:1},
+     {label:'Incidents are black boxes',desc:'Can\'t reliably reconstruct what happened after the fact',score:0}
+   ]},
+  {dim:4, text:'Do you maintain purity of your data, ensuring it hasn\'t been tampered with across its lifecycle?',
+   context:'Purity: maintaining data integrity from creation through archival.',
+   options:[
+     {label:'Cryptographic integrity verification end-to-end',desc:'Hash chains, signed commits, immutable audit logs',score:3},
+     {label:'Integrity checks on critical data',desc:'Key databases and logs have integrity verification',score:2},
+     {label:'Basic access controls on data',desc:'Permissions prevent unauthorized changes, no integrity verification',score:1},
+     {label:'No data integrity verification',desc:'Would not detect unauthorized data modification',score:0}
+   ]},
+  {dim:4, text:'When a security tool or control fails, how do you find out?',
+   options:[
+     {label:'Health monitoring with automated alerting',desc:'Control failures detected and alerted in real-time',score:3},
+     {label:'Periodic health checks',desc:'Regular verification that controls are functioning',score:2},
+     {label:'Find out when something goes wrong',desc:'Control failures discovered during incidents',score:1},
+     {label:'Assume tools are working',desc:'No monitoring of security control health',score:0}
+   ]}
+];
+
+let currentQ = 0;
+let answers = new Array(QUESTIONS.length).fill(-1);
+let resultsData = null;
+
+function startQuiz(){
+  document.getElementById('intro').classList.add('hidden');
+  document.getElementById('quiz').classList.remove('hidden');
+  renderQuestion();
+}
+
+function renderQuestion(){
+  const q = QUESTIONS[currentQ];
+  const dim = DIMENSIONS[q.dim];
+  document.getElementById('progressFill').style.width = ((currentQ+1)/QUESTIONS.length*100)+'%';
+  document.getElementById('progressText').textContent = (currentQ+1)+' of '+QUESTIONS.length;
+  document.getElementById('dimensionLabel').textContent = dim.label;
+  const badge = document.getElementById('dimBadge');
+  badge.className = 'dimension-badge dim-'+dim.key;
+  badge.innerHTML = dim.icon+' '+dim.label;
+  document.getElementById('questionText').textContent = q.text;
+  const ctx = document.getElementById('questionContext');
+  if(q.context){ctx.textContent = q.context;ctx.classList.remove('hidden')}
+  else{ctx.classList.add('hidden')}
+
+  const opts = document.getElementById('options');
+  opts.innerHTML = '';
+  q.options.forEach((o,i) => {
+    const div = document.createElement('div');
+    div.className = 'option'+(answers[currentQ]===i?' selected':'');
+    div.onclick = () => selectOption(i);
+    div.innerHTML = `<div class="option-marker"></div><div class="option-content"><div class="option-label">${o.label}</div>${o.desc?'<div class="option-desc">'+o.desc+'</div>':''}</div>`;
+    opts.appendChild(div);
+  });
+
+  document.getElementById('prevBtn').disabled = currentQ === 0;
+  const nextBtn = document.getElementById('nextBtn');
+  nextBtn.textContent = currentQ === QUESTIONS.length-1 ? 'See Results' : 'Next';
+  nextBtn.disabled = answers[currentQ] === -1;
+}
+
+function selectOption(i){
+  answers[currentQ] = i;
+  document.querySelectorAll('.option').forEach((el,j) => {
+    el.classList.toggle('selected', j===i);
+  });
+  document.getElementById('nextBtn').disabled = false;
+}
+
+function nextQuestion(){
+  if(currentQ < QUESTIONS.length-1){currentQ++;renderQuestion()}
+  else{showResults()}
+}
+function prevQuestion(){
+  if(currentQ > 0){currentQ--;renderQuestion()}
+}
+
+function toggleDimExplainer(el){
+  el.classList.toggle('expanded');
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function buildExportText(){
+  if(!resultsData) return '';
+  const d = resultsData;
+  const date = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  let txt = `OSSTMM Risk Assessment Results\n`;
+  txt += `Date: ${date}\n`;
+  txt += `${'='.repeat(40)}\n\n`;
+  txt += `Overall Score: ${d.simplePct}/100\n`;
+  txt += `Grade: ${d.grade}\n\n`;
+  txt += `Dimension Breakdown:\n`;
+  d.dimScores.forEach((s,i) => {
+    const bar = '█'.repeat(Math.round(s.pct/5)) + '░'.repeat(20-Math.round(s.pct/5));
+    txt += `  ${DIMENSIONS[i].label.padEnd(14)} ${bar} ${s.pct}%\n`;
+  });
+  txt += `\nWeakest: ${DIMENSIONS[d.weakestDim.i].label} (${d.weakestDim.pct}%)\n`;
+  txt += `Strongest: ${DIMENSIONS[d.strongestDim.i].label} (${d.strongestDim.pct}%)\n`;
+  if(d.findings.length > 0 && d.findings[0].severity !== 'good'){
+    txt += `\nGaps Found (${d.findings.length}):\n`;
+    d.findings.forEach(f => {
+      const dim = DIMENSIONS[f.dim] ? DIMENSIONS[f.dim].label : '';
+      const sev = f.severity === 'critical' ? '[CRITICAL]' : '[WARNING]';
+      txt += `  ${sev} ${dim}: ${f.note}\n`;
+    });
+  }
+  txt += `\n${'='.repeat(40)}\n`;
+  txt += `OSSTMM 4 methodology by ISECOM\n`;
+  txt += `Assessment engine by Griffin Cyber Solutions\n`;
+  return txt;
+}
+
+function copyResults(){
+  const txt = buildExportText();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(() => {
+      showToast('Results copied to clipboard');
+    }).catch(() => {
+      fallbackCopy(txt);
+    });
+  } else {
+    fallbackCopy(txt);
+  }
+}
+
+function fallbackCopy(txt){
+  const ta = document.createElement('textarea');
+  ta.value = txt;
+  ta.style.cssText = 'position:fixed;left:-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try{
+    document.execCommand('copy');
+    showToast('Results copied to clipboard');
+  }catch(e){
+    showToast('Could not copy. Long-press to select text.');
+  }
+  document.body.removeChild(ta);
+}
+
+function showResults(){
+  document.getElementById('quiz').classList.add('hidden');
+  const res = document.getElementById('results');
+  res.classList.remove('hidden');
+
+  const dimScores = DIMENSIONS.map((_,di) => {
+    const qs = QUESTIONS.map((q,qi) => ({q,qi})).filter(x => x.q.dim === di);
+    const max = qs.length * 3;
+    const actual = qs.reduce((s,x) => s + x.q.options[answers[x.qi]].score, 0);
+    return {actual, max, pct: Math.round(actual/max*100)};
+  });
+
+  const totalMax = QUESTIONS.length * 3;
+  const totalActual = answers.reduce((s,a,i) => s + QUESTIONS[i].options[a].score, 0);
+  const rawPct = totalActual / totalMax;
+  const simplePct = Math.round(rawPct * 100);
+
+  let grade, gradeColor;
+  if(simplePct >= 85){grade='Operational Security';gradeColor='#10b981'}
+  else if(simplePct >= 70){grade='Measured Posture';gradeColor='#3b82f6'}
+  else if(simplePct >= 50){grade='Compliance Theater';gradeColor='#f59e0b'}
+  else if(simplePct >= 30){grade='Prayer-Based Security';gradeColor='#f97316'}
+  else{grade='Open Season';gradeColor='#ef4444'}
+
+  const findings = [];
+  QUESTIONS.forEach((q,i) => {
+    const score = q.options[answers[i]].score;
+    if(score === 0) findings.push({dim:q.dim, text:q.text, severity:'critical', note:'No coverage. This is an open limitation.'});
+    else if(score === 1) findings.push({dim:q.dim, text:q.text, severity:'warning', note:'Minimal coverage. This gap is exploitable under pressure.'});
+  });
+  if(findings.length === 0) findings.push({dim:-1, text:'No critical gaps detected', severity:'good', note:'Your coverage is strong across all dimensions. The question is whether it\'s been tested.'});
+
+  const weakestDim = dimScores.reduce((min,d,i) => d.pct < min.pct ? {pct:d.pct,i} : min, {pct:101,i:0});
+  const strongestDim = dimScores.reduce((max,d,i) => d.pct > max.pct ? {pct:d.pct,i} : max, {pct:-1,i:0});
+
+  resultsData = {simplePct, grade, gradeColor, dimScores, findings, weakestDim, strongestDim};
+
+  const circumference = 2 * Math.PI * 76;
+
+  res.innerHTML = `
+    <div class="score-ring">
+      <svg viewBox="0 0 170 170">
+        <circle class="track" cx="85" cy="85" r="76"/>
+        <circle class="fill" cx="85" cy="85" r="76" stroke="${gradeColor}"
+          stroke-dasharray="${circumference}"
+          stroke-dashoffset="${circumference}" id="scoreArc"/>
+      </svg>
+      <div class="score-value">
+        <div class="num" id="scoreNum" style="color:${gradeColor}">0</div>
+        <div class="label">Score</div>
+      </div>
+    </div>
+    <div class="grade-label" style="color:${gradeColor}">${grade}</div>
+
+    <div style="font-size:.8rem;color:var(--muted);text-align:center;margin-bottom:12px">Tap a dimension to learn what OSSTMM 4 measures</div>
+
+    <div class="dimension-scores">
+      ${dimScores.map((d,i) => {
+        const dim = DIMENSIONS[i];
+        const v4 = dim.v4;
+        return `
+        <div class="dim-score-row" onclick="toggleDimExplainer(this)">
+          <div class="dim-score-top">
+            <div class="dim-score-icon" style="background:${dim.color}20;color:${dim.color}">${dim.icon}</div>
+            <div class="dim-score-info">
+              <div class="dim-score-name">${dim.label} <span class="dim-score-chevron">&#x25B6;</span></div>
+              <div class="dim-score-bar"><div class="dim-score-bar-fill" style="width:0%;background:${dim.color}" data-width="${d.pct}%"></div></div>
+            </div>
+            <div class="dim-score-val" style="color:${dim.color}">${d.pct}%</div>
+          </div>
+          <div class="dim-explainer">
+            <div class="dim-explainer-inner">
+              <h4>${dim.label}: ${dim.desc}</h4>
+              <p>${v4.summary}</p>
+              <div class="dim-phase">
+                <div class="dim-phase-label" style="color:${dim.color}">Trust Controls (what you rely on)</div>
+                ${v4.trustControls.map(c => `
+                  <div class="dim-control">
+                    <span class="dim-control-name">${c.name}</span>
+                    <span class="dim-control-type type-trust">${c.phase}</span>
+                  </div>
+                  <div style="font-size:.75rem;color:var(--muted);padding:0 0 4px">${c.desc}</div>
+                `).join('')}
+              </div>
+              <div class="dim-phase">
+                <div class="dim-phase-label" style="color:${dim.color}">Security Controls (what you enforce)</div>
+                ${v4.securityControls.map(c => `
+                  <div class="dim-control">
+                    <span class="dim-control-name">${c.name}</span>
+                    <span class="dim-control-type type-security">${c.phase}</span>
+                  </div>
+                  <div style="font-size:.75rem;color:var(--muted);padding:0 0 4px">${c.desc}</div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="findings">
+      <h3>${findings[0].severity==='good'?'&#x2705; Assessment':'&#x26a0;&#xfe0f; Gaps Found ('+findings.length+')'}</h3>
+      ${findings.slice(0,6).map(f => `
+        <div class="finding ${f.severity}">
+          <div class="finding-title">${DIMENSIONS[f.dim]?DIMENSIONS[f.dim].label+': ':''}${f.severity==='critical'?'Critical Gap':'Needs Improvement'}</div>
+          <div class="finding-desc">${f.note}</div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div style="background:var(--surface);border-radius:var(--radius);padding:16px;margin:12px 0">
+      <div style="font-size:.85rem;font-weight:600;margin-bottom:6px">Your Weakest Dimension</div>
+      <div style="font-size:.8rem;color:var(--muted)"><span style="color:${DIMENSIONS[weakestDim.i].color};font-weight:600">${DIMENSIONS[weakestDim.i].label}</span> at ${weakestDim.pct}%. ${DIMENSIONS[weakestDim.i].desc}. This is where an attacker will find the least resistance.</div>
+    </div>
+
+    <div class="export-actions">
+      <button class="btn btn-export" onclick="copyResults()">Copy Results</button>
+      <button class="btn btn-primary" onclick="location.reload()">Retake</button>
+    </div>
+
+    <div class="results-footer">
+      <p>OSSTMM 4 methodology by ISECOM<br>Assessment engine by Griffin Cyber Solutions</p>
+    </div>
+  `;
+
+  setTimeout(() => {
+    const offset = circumference - (simplePct/100 * circumference);
+    document.getElementById('scoreArc').style.strokeDashoffset = offset;
+    let counter = 0;
+    const target = simplePct;
+    const interval = setInterval(() => {
+      counter += Math.ceil(target/40);
+      if(counter >= target){counter = target;clearInterval(interval)}
+      document.getElementById('scoreNum').textContent = counter;
+    }, 30);
+    document.querySelectorAll('.dim-score-bar-fill').forEach(el => {
+      el.style.width = el.dataset.width;
+    });
+  }, 200);
+}
+</script>
+</body>
+</html>
